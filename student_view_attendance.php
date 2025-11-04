@@ -60,7 +60,7 @@ body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9
             <h2>Welcome, <?php echo htmlspecialchars($_SESSION['user_email']); ?></h2>
             <p class="text-muted">Month-wise Average Attendance List</p>
         </div>
-        <form method="post" action="logout.php">
+        <form method="post" action="index.php">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
     </div>

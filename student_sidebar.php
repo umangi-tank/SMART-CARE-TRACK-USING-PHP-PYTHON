@@ -92,14 +92,13 @@
 <body>
 
   <!-- Sidebar -->
-  <div class="sidebar text-center" id="sidebar">
-      <div class="arc text-center">
-          <span class="brand-rku"> SOE | </span>
-          <span class="brand-soac">CARE DESK</span>
-      </div>
+  <div class="sidebar">
+    <div class="sidebar-brand">
+        <h2 class="brand-rku">RKU</h2>
+        <h3 class="brand-admin">SMART CARETRACK</h3>
+    </div>
       <hr>
 
-        <!-- Admin Sidebar with proper icons -->
     <a href="student_dashboard.php" class="a"><i class="bi bi-speedometer2"></i> Dashboard</a>
     <a href="student_leaveRequest.php" class="a"><i class="bi bi-journal-text"></i> Leave Requests</a>
     <a href="student_complints.php" class="a"><i class="bi bi-exclamation-circle"></i> Complaints Box</a>

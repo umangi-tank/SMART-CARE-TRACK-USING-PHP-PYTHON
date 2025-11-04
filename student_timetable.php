@@ -60,7 +60,7 @@ body {
             <h2>Weekly Time Table</h2>
             <p class="text-muted">Class schedule for Monday to Friday</p>
         </div>
-        <form method="post" action="logout.php">
+        <form method="post" action="index.php">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
     </div>
@@ -111,12 +111,11 @@ body {
 
             <!-- 3rd Slot (optional/blank) -->
             <tr>
-                <td>12:30 - 14:10</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
-                <td>-</td>
+                <td>CD Batch 1 (MS)<br>CC Batch 2 (AKK)<br>BD (CS)</td>
+                <td>CS Batch 1 (SS)<br>CS Batch 2 (BD)</td>
+                <td>IoT (NC) / Project (JP)<br>DL (CP) / Project (JP)</td>
+                <td>IoT (NC)<br>DL (CP)</td>
+                <td>CD Batch 1 + CD Batch 3 (MS)<br>CC Batch 2 (VA)</td>
             </tr>
         </tbody>
     </table>

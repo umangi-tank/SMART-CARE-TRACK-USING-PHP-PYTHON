@@ -20,50 +20,9 @@ body {
     display:flex;
 }
 
-/* Sidebar styling */
-.sidebar {
-    width: 220px;
-    background: #fff;
-    border-right: 1px solid #ddd;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    padding-top: 20px;
-}
-.sidebar .sidebar-brand { text-align:center; margin-bottom:30px; }
-.brand-rku { color:#b71c1c; margin:0; font-size:24px; }
-.brand-admin { color:#444; margin:0; font-size:16px; }
-.sidebar a {
-    display:block;
-    padding:12px 20px;
-    color:#333;
-    text-decoration:none;
-    margin:5px 10px;
-    border-radius:6px;
-    transition:0.3s;
-}
-.sidebar a i { margin-right:10px; }
-.sidebar a:hover, .sidebar a.active {
-    background:#b71c1c;
-    color:#fff;
-    font-weight:bold;
-}
-.logout-btn {
-    margin:20px 10px;
-    width: calc(100% - 20px);
-    background:#b71c1c;
-    color:#fff;
-    border:none;
-    padding:10px;
-    border-radius:6px;
-    cursor:pointer;
-}
-.logout-btn:hover { background:#880e4f; }
-
-/* Main content */
+/* Sidebar layout fix */
 .content {
-    margin-left:220px;
+    margin-left:220px; /* adjust based on sidebar width */
     padding:30px;
     flex:1;
 }
@@ -75,6 +34,63 @@ body {
 }
 .dashboard-header h2 { color:#b71c1c; }
 .dashboard-header .welcome { color:#444; font-weight:bold; }
+
+/* Status summary boxes */
+.status-boxes {
+    display:flex;
+    flex-wrap:wrap;
+    gap:25px;
+    margin-bottom:40px;
+}
+.status-box {
+    flex:1 1 220px;
+    min-width:200px;
+    background:#fff;
+    border-left:6px solid #b71c1c;
+    border-radius:10px;
+    padding:20px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    transition:0.3s;
+}
+.status-box:hover {
+    transform:translateY(-5px);
+    box-shadow:0 8px 20px rgba(0,0,0,0.2);
+}
+.status-box i {
+    font-size:30px;
+    color:#b71c1c;
+}
+.status-box .info h4 {
+    margin:0;
+    font-size:18px;
+    color:#444;
+}
+.status-box .info p {
+    margin:0;
+    font-size:22px;
+    font-weight:bold;
+    color:#b71c1c;
+}
+
+/* Mission & Vision Section */
+.mission-vision {
+    background:#fff;
+    border-radius:10px;
+    padding:25px;
+    box-shadow:0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom:40px;
+}
+.mission-vision h3 {
+    color:#b71c1c;
+    margin-bottom:15px;
+}
+.mission-vision p {
+    color:#444;
+    line-height:1.6;
+}
 
 /* Dashboard cards layout */
 .dashboard-cards {
@@ -122,68 +138,56 @@ body {
 </head>
 <body>
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <h2 class="brand-rku">RKU</h2>
-        <h3 class="brand-admin">Admin</h3>
-    </div>
 
-    <a href="admin_dashboard.php" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-    <a href="add_student.php"><i class="fas fa-user-plus"></i> Add Student</a>
-    <a href="add_faculty.php"><i class="fas fa-user-plus"></i> Add Faculty</a>
-    <a href="manage.php"><i class="fas fa-users-cog"></i> Manage</a>
-    <a href="timetable.php"><i class="fas fa-calendar-alt"></i> Timetable</a>
-    <a href="attendance.php"><i class="fas fa-user-check"></i> Attendance</a>
-    
-    <a href="settings.php"><i class="fas fa-cog"></i> Settings</a>
+<?php include 'admin_sidebar.php'; ?>
 
-    <form method="post" action="logout.php">
-        <button type="submit" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
-    </form>
-</div>
-
-<!-- Main content -->
 <div class="content">
     <div class="dashboard-header">
         <h2>Admin Dashboard</h2>
         <div class="welcome">Welcome, <?php echo htmlspecialchars($_SESSION['admin_name']); ?></div>
     </div>
 
-    <div class="dashboard-cards">
-        <div class="card" onclick="location.href='admin_dashboard.php'">
-            <h3><i class="fas fa-tachometer-alt"></i> Dashboard</h3>
-            <p>Overview of all admin activities.</p>
+    <!-- Status Boxes -->
+    <div class="status-boxes">
+        <div class="status-box">
+            <div class="info">
+                <h4>All Students</h4>
+                <p>1250</p>
+            </div>
+            <i class="fas fa-user-graduate"></i>
         </div>
-        <div class="card" onclick="location.href='add_student.php'">
-            <h3><i class="fas fa-user-plus"></i> Add Student</h3>
-            <p>Add new student accounts and details.</p>
+        <div class="status-box">
+            <div class="info">
+                <h4>All Complaints</h4>
+                <p>20</p>
+            </div>
+            <i class="fas fa-building"></i>
         </div>
-        <div class="card" onclick="location.href='add_faculty.php'">
-            <h3><i class="fas fa-user-plus"></i> Add Faculty</h3>
-            <p>Add new faculty accounts and details.</p>
+        <div class="status-box">
+            <div class="info">
+                <h4>All Teachers</h4>
+                <p>85</p>
+            </div>
+            <i class="fas fa-chalkboard-teacher"></i>
         </div>
-        <div class="card" onclick="location.href='manage.php'">
-            <h3><i class="fas fa-users-cog"></i> Manage</h3>
-            <p>Edit or remove students and faculty details.</p>
-        </div>
-        <div class="card" onclick="location.href='timetable.php'">
-            <h3><i class="fas fa-calendar-alt"></i> Timetable</h3>
-            <p>View and edit class schedules.</p>
-        </div>
-        <div class="card" onclick="location.href='attendance.php'">
-            <h3><i class="fas fa-user-check"></i> Attendance</h3>
-            <p>Mark and monitor student attendance.</p>
-        </div>
-        <div class="card" onclick="location.href='review.php'">
-            <h3><i class="fas fa-star"></i> Review</h3>
-            <p>Check feedback and reviews submitted.</p>
-        </div>
-        <div class="card" onclick="location.href='settings.php'">
-            <h3><i class="fas fa-cog"></i> Settings</h3>
-            <p>Update admin account settings.</p>
+        <div class="status-box">
+            <div class="info">
+                <h4>Pending Requests</h4>
+                <p>5</p>
+            </div>
+            <i class="fas fa-envelope-open-text"></i>
         </div>
     </div>
+
+    <!-- Mission & Vision -->
+    <div class="mission-vision">
+        <h3><i class="fas fa-bullseye"></i> Mission</h3>
+        <p>Our mission is to provide an efficient, smart, and reliable system to manage student and faculty activities with transparency and technological excellence.</p>
+
+        <h3><i class="fas fa-eye"></i> Vision</h3>
+        <p>Our vision is to become a digital leader in academic management by integrating innovation, accuracy, and accessibility for all users.</p>
+    </div>
+
 </div>
 
 </body>
