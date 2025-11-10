@@ -128,7 +128,8 @@
   <header>
       <h1>RKU SMART CARE TRACK</h1>
       <div>
-          <a href="login.php">Login</a>
+          <a href="login.php">Students</a>
+          <a href="faculty_login.php">Faculty</a>
           <a href="admin_login.php">Admin</a>
       </div>
   </header>

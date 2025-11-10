@@ -1,14 +1,14 @@
 <?php
 session_start();
-if(!isset($_SESSION['student_id'])) {
-    header("Location: student_login.php");
+if(!isset($_SESSION['faculty_id'])) {
+    header("Location: faculty_login.php");
     exit();
 }
+require_once __DIR__ . 'RKU-CAREDESK/db_connect.php';
 
-require_once 'db.php';
 
 $announcements = [];
-$stmt = $mysqli->prepare("SELECT * FROM announcements WHERE audience IN ('student','all') ORDER BY date DESC, time DESC, created_at DESC");
+$stmt = $mysqli->prepare("SELECT * FROM announcements WHERE audience IN ('faculty','all') ORDER BY date DESC, time DESC, created_at DESC");
 $stmt->execute();
 $res = $stmt->get_result();
 while ($row = $res->fetch_assoc()) $announcements[] = $row;
@@ -18,13 +18,13 @@ $stmt->close();
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Announcements - Students</title>
+    <title>Announcements - Faculty</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-<?php include 'student_sidebar.php'; ?>
+<?php include 'faculty_sidebar.php'; ?>
 <div class="container" style="margin-left:220px; padding:30px;">
-    <h2>Announcements for Students</h2>
+    <h2>Announcements for Faculty</h2>
     <?php if (empty($announcements)): ?>
         <div class="alert alert-info">No announcements available.</div>
     <?php else: ?>

@@ -111,6 +111,7 @@ body {
 
             <!-- 3rd Slot (optional/blank) -->
             <tr>
+                <td>12:30 - 02:10</td>
                 <td>CD Batch 1 (MS)<br>CC Batch 2 (AKK)<br>BD (CS)</td>
                 <td>CS Batch 1 (SS)<br>CS Batch 2 (BD)</td>
                 <td>IoT (NC) / Project (JP)<br>DL (CP) / Project (JP)</td>

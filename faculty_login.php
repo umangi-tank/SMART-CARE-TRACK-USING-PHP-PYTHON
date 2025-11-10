@@ -1,54 +1,58 @@
 <?php
 session_start();
-$login_error = '';
+include 'db_connect.php'; // <-- make sure this file has your DB connection
 
-include 'db_connect.php'; // Include your DB connection
+$login_error = '';
 
 if (isset($_POST['submit'])) {
     $email = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
 
-    // Backend validation
+    // Backend Validation
     if (empty($email) || empty($password)) {
         $login_error = "Please enter both email and password.";
     } elseif (!preg_match("/^[a-zA-Z0-9._%+-]+@rku\.ac\.in$/", $email)) {
-        $login_error = "Email must be an RKU email (e.g., student@rku.ac.in).";
+        $login_error = "Email must be an RKU email (e.g., faculty@rku.ac.in).";
+    } elseif (strlen($password) < 5) {
+        $login_error = "Password must be at least 5 characters long.";
     } else {
-        // Check in DB
-        $stmt = $conn->prepare("SELECT * FROM students WHERE email = ?");
+        // Check credentials in database
+        $query = "SELECT * FROM faculty WHERE email = ?";
+        $stmt = $conn->prepare($query);
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
 
         if ($result->num_rows === 1) {
-            $student = $result->fetch_assoc();
+            $faculty = $result->fetch_assoc();
 
-            // Password check (hashed in DB)
-            if (password_verify($password, $student['password'])) {
-                $_SESSION['user_email'] = $student['email'];
-                $_SESSION['user_name'] = $student['full_name']; // optional
-                header("Location: student_dashboard.php");
+            // Verify password using password_verify()
+            if (password_verify($password, $faculty['password'])) {
+                // ✅ Successful login
+                $_SESSION['faculty_email'] = $faculty['email'];
+                $_SESSION['faculty_name'] = $faculty['full_name'];
+                header("Location: faculty_dashboard.php");
                 exit();
             } else {
-                $login_error = "Invalid password.";
+                $login_error = "Incorrect password.";
             }
         } else {
-            $login_error = "Invalid person. You are not registered by admin.";
+            $login_error = "Invalid person — not registered faculty.";
         }
+
+        $stmt->close();
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RKU CAREDESK | Sign In</title>
+    <title>RKU CAREDESK | Faculty Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <style>
         body {
             font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
@@ -56,33 +60,22 @@ if (isset($_POST['submit'])) {
             color: #333;
             min-height: 100vh;
         }
-
         .main {
             background-color: #F5F5DC !important;
             border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             border-top: 5px solid #b71c1c;
         }
-
         .main h2 {
             color: #b71c1c;
             text-align: center;
             margin-bottom: 25px;
             font-weight: bold;
         }
-
         .form-control {
             border-radius: 4px;
             padding: 10px;
-            font-family: "Gill Sans", sans-serif;
         }
-
-        ::placeholder {
-            font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
-            font-size: 14px;
-            color: #666;
-        }
-
         .button {
             display: block;
             width: 100%;
@@ -97,24 +90,19 @@ if (isset($_POST['submit'])) {
             font-weight: bold;
             margin-top: 15px;
         }
-
         .button:hover {
             background: #880e4f;
             color: white;
         }
-
         .a {
             color: #424242;
             text-decoration: none;
-            display: inline-block;
             font-size: 14px;
         }
-
         .a:hover {
             color: #b71c1c;
             text-decoration: underline;
         }
-
         .alert-error {
             color: #b71c1c;
             background: #fbebeb;
@@ -124,7 +112,6 @@ if (isset($_POST['submit'])) {
             border-radius: 4px;
             text-align: center;
         }
-
         .back-button {
             margin-bottom: 10px;
             background: none;
@@ -138,12 +125,10 @@ if (isset($_POST['submit'])) {
             font-weight: bold;
             transition: color 0.3s;
         }
-
         .back-button:hover {
             color: #880e4f;
             text-decoration: underline;
         }
-
         .back-button i {
             margin-right: 5px;
         }
@@ -159,7 +144,6 @@ if (isset($_POST['submit'])) {
                 </button>
             </div>
             <div class="main p-5 border shadow-sm mx-auto" style="max-width: 450px;">
-
                 <h2><i class="fas fa-user-tie me-2"></i>SIGN IN</h2>
 
                 <!-- PHP Error -->
@@ -168,22 +152,19 @@ if (isset($_POST['submit'])) {
                     echo '<div class="alert-error">' . htmlspecialchars($login_error) . '</div>';
                 }
                 ?>
-                <!-- JS Error -->
-                <div id="js-error" class="alert-error d-none"></div>
 
+                <div id="js-error" class="alert-error d-none"></div>
+                
                 <form class="mt-3" method="post" id="form" onsubmit="return validateSignInForm()">
                     <div class="mb-3">
                         <input type="email" name="email" id="email" class="form-control" 
                                placeholder="Example@rku.ac.in">
                     </div>
-
                     <div class="mb-3">
                         <input type="password" id="password" name="password" class="form-control" 
                                placeholder="Minimum 5 characters">
                     </div>
-
                     <input type="submit" name="submit" value="Sign In" class="button">
-
                     <p class="text-center mt-3 mb-0">
                         <a href="#" class="a">Forgot Password?</a>
                     </p>
@@ -191,7 +172,7 @@ if (isset($_POST['submit'])) {
             </div>
         </div>
     </div>
-
+    
     <script>
         function goToIndexPage() {
             window.location.href = "index.php"; 
@@ -219,7 +200,7 @@ if (isset($_POST['submit'])) {
                 return false;
             }
             if (!emailPattern.test(email)) {
-                showError("Email must be a valid RKU Email (e.g., student@rku.ac.in).");
+                showError("Email must be a valid RKU Email (e.g., faculty@rku.ac.in).");
                 return false;
             }
             if (password === "") {

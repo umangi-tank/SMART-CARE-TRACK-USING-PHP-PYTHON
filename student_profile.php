@@ -5,52 +5,46 @@ if (!isset($_SESSION['user_email'])) {
     exit();
 }
 
-// Sample profile data
-$profile = [
-    'personal' => [
-        'Full Name' => 'TANK UMANGI ASHOKBHAI',
-        'As Per Marksheet Name' => 'TANK UMANGI ASHOKBHAI',
-        'Father Name' => 'ASHOKBHAI',
-        'Mother Name' => 'NEHABEN',
-        'Gender' => 'Female',
-        'Date of Birth' => '12/04/2005',
-        'Aadhar Card Number' => '908482979845',
-        'Blood Group' => 'NA',
-        'Name As Per Aadhar Card' => 'TANK UMANGI ASHOKBHAI',
-        'Email' => 'utank285@rku.ac.in',
-        'Mobile Number' => '9173914174',
-        'Category' => 'OBC/SEBC'
-    ],
-    'contact' => [
-        'Address Line 1' => 'SHREE LAXMI NARAYAN , SANTOSH PARK , STREET NO 4 , KOTHARIYA ROAD , RAJKOT',
-        'Address Line 2' => 'SHREE LAXMI NARAYAN , SANTOSH PARK , STREET NO 4 , KOTHARIYA ROAD , RAJKOT',
-        'Father Mobile No.' => '7623045838',
-        'City' => 'RAJKOT',
-        'State' => '1',
-        'Country' => 'INDIA',
-        'Pin Code' => '360002'
-    ],
-    'academic' => [
-        'School' => 'SCHOOL OF ENGINEERING',
-        'Department' => 'Computer Engineering',
-        'Program' => 'BACHELOR OF TECHNOLOGY IN COMPUTER ENGINEERING',
-        'Semester/Year' => 'Sem-VII',
-        'Division' => 'A (7CEA)',
-        'Roll No' => '64',
-        'Admission No' => '232411020041',
-        'Enrollment No.' => '23SOECE13023',
-        'Admission Year' => '2023',
-        'Admission type' => 'D to D',
-        'Internet Username' => '232411020041',
-        'Internet Password' => '656998',
-        'Institute Email-ID' => '-',
-        'Institute Password' => '-',
-        'APAAR ID / ABC ID' => '960734694676',
-        'Anti-Ragging Registration Number' => '-'
-    ]
-];
-?>
+// Include DB connection
+include 'db_connect.php';
 
+$user_email = $_SESSION['user_email'];
+
+// Fetch student details from DB
+$stmt = $conn->prepare("SELECT * FROM students WHERE email = ?");
+$stmt->bind_param("s", $user_email);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows === 0) {
+    echo "<script>alert('Student not found!'); window.location.href='login.php';</script>";
+    exit();
+}
+
+$student = $result->fetch_assoc();
+
+// Handle profile photo upload
+if (isset($_FILES['profile_pic']) && $_FILES['profile_pic']['name'] != '') {
+    $target_dir = "uploads/";
+
+    if (!is_dir($target_dir)) {
+        mkdir($target_dir, 0777, true);
+    }
+
+    // ORIGINAL filename only
+    $file_name = basename($_FILES['profile_pic']['name']);
+    $target_file = $target_dir . $file_name;
+
+    if (move_uploaded_file($_FILES['profile_pic']['tmp_name'], $target_file)) {
+        // Update in database
+        $update_stmt = $conn->prepare("UPDATE students SET profile_photo = ? WHERE email = ?");
+        $update_stmt->bind_param("ss", $target_file, $user_email);
+        $update_stmt->execute();
+        $student['profile_photo'] = $target_file;
+    }
+}
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -127,17 +121,17 @@ body {
     <!-- Dashboard Header -->
     <div class="dashboard-header">
         <div>
-            <h2>Welcome, <?php echo htmlspecialchars($_SESSION['user_email']); ?></h2>
+            <h2>Welcome, <?php echo htmlspecialchars($student['full_name']); ?></h2>
             <p class="text-muted">Your profile details</p>
         </div>
-        <form method="post" action="index.php">
+        <form method="post" action="logout.php">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
     </div>
 
     <!-- Profile Header -->
     <div class="profile-header">
-        <img id="profilePic" src="default-profile.png" alt="Profile Picture">
+        <img id="profilePic" src="<?php echo !empty($student['profile_photo']) ? $student['profile_photo'] : 'default-profile.png'; ?>" alt="Profile Picture">
         <form method="post" enctype="multipart/form-data">
             <input type="file" name="profile_pic" accept="image/*" class="form-control mb-2" onchange="previewImage(event)">
             <button type="submit" class="btn btn-danger">Update Profile</button>
@@ -149,12 +143,18 @@ body {
         <h4>Personal Details</h4>
         <table class="table table-bordered">
             <tbody>
-            <?php foreach($profile['personal'] as $key => $value): ?>
-                <tr>
-                    <th><?php echo $key; ?></th>
-                    <td><?php echo $value; ?></td>
-                </tr>
-            <?php endforeach; ?>
+                <tr><th>Full Name</th><td><?php echo $student['full_name']; ?></td></tr>
+                <tr><th>As Per Marksheet Name</th><td><?php echo $student['marksheet_name']; ?></td></tr>
+                <tr><th>Father Name</th><td><?php echo $student['father_name']; ?></td></tr>
+                <tr><th>Mother Name</th><td><?php echo $student['mother_name']; ?></td></tr>
+                <tr><th>Gender</th><td><?php echo $student['gender']; ?></td></tr>
+                <tr><th>Date of Birth</th><td><?php echo $student['dob']; ?></td></tr>
+                <tr><th>Aadhar Card Number</th><td><?php echo $student['aadhar']; ?></td></tr>
+                <tr><th>Blood Group</th><td><?php echo $student['blood_group']; ?></td></tr>
+                <tr><th>Name As Per Aadhar Card</th><td><?php echo $student['aadhar_name']; ?></td></tr>
+                <tr><th>Email</th><td><?php echo $student['email']; ?></td></tr>
+                <tr><th>Mobile Number</th><td><?php echo $student['mobile']; ?></td></tr>
+                <tr><th>Category</th><td><?php echo $student['category']; ?></td></tr>
             </tbody>
         </table>
     </div>
@@ -164,12 +164,13 @@ body {
         <h4>Contact Details</h4>
         <table class="table table-bordered">
             <tbody>
-            <?php foreach($profile['contact'] as $key => $value): ?>
-                <tr>
-                    <th><?php echo $key; ?></th>
-                    <td><?php echo $value; ?></td>
-                </tr>
-            <?php endforeach; ?>
+                <tr><th>Father Mobile No.</th><td><?php echo $student['father_mobile']; ?></td></tr>
+                <tr><th>Address Line 1</th><td><?php echo $student['address1']; ?></td></tr>
+                <tr><th>Address Line 2</th><td><?php echo $student['address2']; ?></td></tr>
+                <tr><th>City</th><td><?php echo $student['city']; ?></td></tr>
+                <tr><th>State</th><td><?php echo $student['state']; ?></td></tr>
+                <tr><th>Country</th><td><?php echo $student['country']; ?></td></tr>
+                <tr><th>Pin Code</th><td><?php echo $student['pincode']; ?></td></tr>
             </tbody>
         </table>
     </div>
@@ -179,12 +180,22 @@ body {
         <h4>Academic Details</h4>
         <table class="table table-bordered">
             <tbody>
-            <?php foreach($profile['academic'] as $key => $value): ?>
-                <tr>
-                    <th><?php echo $key; ?></th>
-                    <td><?php echo $value; ?></td>
-                </tr>
-            <?php endforeach; ?>
+                <tr><th>School</th><td><?php echo $student['school']; ?></td></tr>
+                <tr><th>Department</th><td><?php echo $student['department']; ?></td></tr>
+                <tr><th>Program</th><td><?php echo $student['program']; ?></td></tr>
+                <tr><th>Semester/Year</th><td><?php echo $student['semester']; ?></td></tr>
+                <tr><th>Division</th><td><?php echo $student['division']; ?></td></tr>
+                <tr><th>Roll No</th><td><?php echo $student['roll_no']; ?></td></tr>
+                <tr><th>Admission No</th><td><?php echo $student['admission_no']; ?></td></tr>
+                <tr><th>Enrollment No.</th><td><?php echo $student['enrollment_no']; ?></td></tr>
+                <tr><th>Admission Year</th><td><?php echo $student['admission_year']; ?></td></tr>
+                <tr><th>Admission type</th><td><?php echo $student['admission_type']; ?></td></tr>
+                <tr><th>Internet Username</th><td><?php echo $student['internet_username']; ?></td></tr>
+                <tr><th>Internet Password</th><td><?php echo $student['internet_password']; ?></td></tr>
+                <tr><th>Institute Email-ID</th><td><?php echo $student['institute_email']; ?></td></tr>
+                <tr><th>Institute Password</th><td><?php echo $student['institute_password']; ?></td></tr>
+                <tr><th>APAAR ID / ABC ID</th><td><?php echo $student['apaar_id']; ?></td></tr>
+                <tr><th>Anti-Ragging Registration Number</th><td><?php echo $student['anti_ragging']; ?></td></tr>
             </tbody>
         </table>
     </div>
@@ -201,6 +212,5 @@ function previewImage(event) {
     reader.readAsDataURL(event.target.files[0]);
 }
 </script>
-
 </body>
 </html>
