@@ -1,153 +1,184 @@
-<?php  
-session_start();  
-if(!isset($_SESSION['admin_name'])) {  
-    header("Location: admin_login.php");  
-    exit();  
-}  
-?>  
+<?php
+session_start();
+if(!isset($_SESSION['admin_name'])) {
+    header("Location: admin_login.php");
+    exit();
+}
 
-<!DOCTYPE html>  
+include 'db_connect.php'; // ensure $mysqli is your DB connection variable
 
-<html lang="en">  
-<head>  
-<meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0">  
-<title>CE Admin Timetable</title>  
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">  
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">  
-<style>  
-body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9f9f9; margin:0; display:flex; }  
-.content { margin-left:220px; padding:30px; flex:1; }  
-.dashboard-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; }  
-.dashboard-header h2 { color:#b71c1c; }  
+// Fetch subjects
+$subjects = $mysqli->query("SELECT id, subject_name FROM subject");
 
-.select-semester { max-width:200px; margin-bottom:20px; }
+// Fetch faculty names (from faculty table)
+$faculty_result = $mysqli->query("SELECT full_name FROM faculty");
 
-.table-bordered { border:2px solid #b71c1c; text-align:center; }
-.table-bordered th, .table-bordered td { vertical-align:middle; }
-.break-row { background-color:#f2f2f2; font-weight:bold; }
+// Handle timetable form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $semester = $_POST['semester'];
+    $division = $_POST['division'];
 
-.btn-edit { background:#b71c1c; color:#fff; border:none; padding:10px 20px; border-radius:6px; font-weight:bold; margin-top:15px; cursor:pointer; }
-.btn-edit:hover { background:#880e4f; } </style>
+    foreach ($_POST['timetable'] as $time_slot => $days) {
+        foreach ($days as $day => $values) {
+            $subject_id = $values['subject'];
+            $faculty_name = $values['faculty'];
 
-</head>  
-<body>  
+            if (!empty($subject_id) && !empty($faculty_name)) {
+                // Get subject name
+                $subject_res = $mysqli->query("SELECT subject_name FROM subject WHERE id='$subject_id'");
+                $subject_name = $subject_res->fetch_assoc()['subject_name'];
 
-<?php include 'admin_sidebar.php'; ?>  
+                // Insert data
+                $stmt = $mysqli->prepare("INSERT INTO timetable (semester, division, day, time_slot, subject, faculty)
+                                          VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("ssssss", $semester, $division, $day, $time_slot, $subject_name, $faculty_name);
+                $stmt->execute();
+                $stmt->close();
+            }
+        }
+    }
 
-<div class="content">  
-    <div class="dashboard-header">  
-        <h2>CE Admin Timetable</h2>  
-        <div class="welcome">Welcome, <?php echo htmlspecialchars($_SESSION['admin_name']); ?></div>  
-    </div>  
+    echo "<script>alert('✅ Timetable added successfully!');</script>";
+}
+?>
 
-<!-- Semester Dropdown -->  
-<select class="form-select select-semester">  
-    <option selected disabled>Select Semester</option>  
-    <option>CE Semester 1</option>  
-    <option>CE Semester 2</option>  
-    <option>CE Semester 3</option>  
-    <option>CE Semester 4</option>  
-    <option>CE Semester 5</option>  
-    <option>CE Semester 6</option>  
-    <option>CE Semester 7</option>  
-    <option>CE Semester 8</option>  
-</select>  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Add Timetable | Admin</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body {
+    font-family: "Gill Sans", "Gill Sans MT", Calibri, sans-serif;
+    background: #f9f9f9;
+    margin: 0;
+    display: flex;
+}
+.content {
+    margin-left: 220px;
+    padding: 30px;
+    flex: 1;
+}
+h3 {
+    color: #b71c1c;
+}
+.card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 25px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.table th {
+    background-color: #b71c1c;
+    color: white;
+}
+.table td, .table th {
+    text-align: center;
+    vertical-align: middle;
+}
+select {
+    border-radius: 5px;
+}
+.btn-primary {
+    background-color: #b71c1c;
+    border: none;
+}
+.btn-primary:hover {
+    background-color: #9a1717;
+}
+</style>
+</head>
+<body>
 
-<!-- Timetable Table -->  
-<table class="table table-bordered" id="timetable">  
-    <thead class="table-light">  
-        <tr>  
-            <th>Time Slot</th>  
-            <th>Monday</th>  
-            <th>Tuesday</th>  
-            <th>Wednesday</th>  
-            <th>Thursday</th>  
-            <th>Friday</th>  
-        </tr>  
-    </thead>  
-    <tbody>  
-        <tr>  
-            <td>08:00 - 09:45</td>  
-            <td>Subject 1<br>Subject 2</td>  
-            <td>Subject 1<br>Subject 2</td>  
-            <td>Subject 1<br>Subject 2</td>  
-            <td>Subject 1<br>Subject 2</td>  
-            <td>Subject 1<br>Subject 2</td>  
-        </tr>  
-        <tr class="break-row">  
-            <td>09:45 - 10:00 (Tea Break)</td>  
-            <td colspan="5">Tea Break</td>  
-        </tr>  
-        <tr>  
-            <td>10:00 - 11:40</td>  
-            <td>Subject 3<br>Subject 4</td>  
-            <td>Subject 3<br>Subject 4</td>  
-            <td>Subject 3<br>Subject 4</td>  
-            <td>Subject 3<br>Subject 4</td>  
-            <td>Subject 3<br>Subject 4</td>  
-        </tr>  
-        <tr class="break-row">  
-            <td>11:40 - 12:30 (Lunch Break)</td>  
-            <td colspan="5">Lunch Break</td>  
-        </tr>  
-        <tr>  
-            <td>12:30 - 14:00</td>  
-            <td>Subject 5<br>Subject 6</td>  
-            <td>Subject 5<br>Subject 6</td>  
-            <td>Subject 5<br>Subject 6</td>  
-            <td>Subject 5<br>Subject 6</td>  
-            <td>Subject 5<br>Subject 6</td>  
-        </tr>  
-    </tbody>  
-</table>  
+<?php include 'admin_sidebar.php'; ?>
 
-<!-- Edit Button -->  
-<button class="btn-edit" id="editBtn"><i class="fas fa-edit"></i> Edit Timetable</button>  
+<div class="content">
+    <div class="dashboard-header d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="fas fa-calendar-alt me-2"></i>Manage Timetable</h3>
+        <div class="welcome">Welcome, <?php echo htmlspecialchars($_SESSION['admin_name']); ?></div>
+    </div>
 
+    <div class="card">
+        <form method="POST">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Select Semester</label>
+                    <select name="semester" class="form-select" required>
+                        <option value="">Select Semester</option>
+                        <?php for($i=1;$i<=8;$i++): ?>
+                            <option value="<?= $i ?>">Sem <?= $i ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Select Division</label>
+                    <select name="division" class="form-select" required>
+                        <option value="">Select Division</option>
+                        <?php foreach (['A','B','C','D','E','F','G','H'] as $div): ?>
+                            <option value="<?= $div ?>">Div <?= $div ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
 
-</div>  
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th>Time Slot</th>
+                            <th>Monday</th>
+                            <th>Tuesday</th>
+                            <th>Wednesday</th>
+                            <th>Thursday</th>
+                            <th>Friday</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $slots = ['8:05-8:55', '8:55-9:45', '10:00-10:50', '10:50-11:40', '12:30-1:20', '1:20-2:10'];
+                        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-<script>  
-const editBtn = document.getElementById('editBtn');  
-let editing = false;  
+                        foreach ($slots as $slot):
+                            echo "<tr><td><strong>$slot</strong></td>";
+                            foreach ($days as $day):
+                                echo "<td>";
+                                // Subject dropdown
+                                echo "<select name='timetable[$slot][$day][subject]' class='form-select mb-2'>";
+                                echo "<option value=''>Select Subject</option>";
+                                $subjects->data_seek(0);
+                                while ($sub = $subjects->fetch_assoc()) {
+                                    echo "<option value='{$sub['id']}'>{$sub['subject_name']}</option>";
+                                }
+                                echo "</select>";
 
-editBtn.addEventListener('click', () => {  
-    const table = document.getElementById('timetable');  
-    if(!editing){  
-        // Enable editing  
-        Array.from(table.rows).forEach((row, i) => {  
-            if(i>0){ // skip header  
-                Array.from(row.cells).forEach((cell, j) => {  
-                    if(!row.classList.contains('break-row') && j>0){ // skip time slot and breaks  
-                        cell.contentEditable = "true";  
-                        cell.style.background="#fff9f9";  
-                    }  
-                });  
-            }  
-        });  
-        editBtn.innerHTML = '<i class="fas fa-save"></i> Save Timetable';  
-        editing = true;  
-    } else {  
-        // Disable editing  
-        Array.from(table.rows).forEach((row, i) => {  
-            if(i>0){  
-                Array.from(row.cells).forEach((cell, j) => {  
-                    if(!row.classList.contains('break-row') && j>0){  
-                        cell.contentEditable = "false";  
-                        cell.style.background="";  
-                    }  
-                });  
-            }  
-        });  
-        editBtn.innerHTML = '<i class="fas fa-edit"></i> Edit Timetable';  
-        editing = false;  
+                                // Faculty dropdown (now uses full_name)
+                                echo "<select name='timetable[$slot][$day][faculty]' class='form-select'>";
+                                echo "<option value=''>Select Faculty</option>";
+                                $faculty_result->data_seek(0);
+                                while ($fac = $faculty_result->fetch_assoc()) {
+                                    echo "<option value='{$fac['full_name']}'>{$fac['full_name']}</option>";
+                                }
+                                echo "</select>";
 
-        // TODO: Save data via PHP/AJAX  
-        alert('Timetable changes saved!');  
-    }  
-});  
-</script>  
+                                echo "</td>";
+                            endforeach;
+                            echo "</tr>";
+                        endforeach;
+                        ?>
+                    </tbody>
+                </table>
+            </div>
 
-</body>  
-</html>  
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary px-5 py-2">
+                    <i class="fas fa-save me-2"></i>Save Timetable
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

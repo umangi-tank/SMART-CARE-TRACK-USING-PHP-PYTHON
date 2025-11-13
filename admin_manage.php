@@ -105,7 +105,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
             $sql = "UPDATE students SET " . implode(", ", $parts) . " WHERE id = ?";
             $types .= 'i';
             $params[] = $id;
-            $stmt = $conn->prepare($sql);
+            $stmt = $mysqli->prepare($sql);
             if($stmt === false){ $msg = "Prepare failed: ".$conn->error; }
             else {
                 $bind = []; $bind[] = $types;
@@ -176,7 +176,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
             $sql = "UPDATE faculty SET " . implode(", ", $parts) . " WHERE id = ?";
             $types .= 'i';
             $params[] = $id;
-            $stmt = $conn->prepare($sql);
+            $stmt = $mysqli->prepare($sql);
             if($stmt === false){ $msg = "Prepare failed: ".$conn->error; }
             else {
                 $bind = []; $bind[] = $types;
@@ -209,11 +209,11 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 
 // ---------------- Fetch lists ----------------
 $students = [];
-$res = $conn->query("SELECT * FROM students ORDER BY id ASC");
+$res = $mysqli->query("SELECT * FROM students ORDER BY id ASC");
 if($res && $res->num_rows) while($r = $res->fetch_assoc()) $students[] = $r;
 
 $faculty = [];
-$res = $conn->query("SELECT * FROM faculty ORDER BY id ASC");
+$res = $mysqli->query("SELECT * FROM faculty ORDER BY id ASC");
 if($res && $res->num_rows) while($r = $res->fetch_assoc()) $faculty[] = $r;
 
 ?>
@@ -229,8 +229,8 @@ body{font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;margin:0;display:
 .content{margin-left:220px;padding:20px;flex:1}
 .table-section{background:#fff;border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 2px 6px rgba(0,0,0,0.06)}
 img.profile-photo{width:50px;height:50px;object-fit:cover;border-radius:50%}
-.btn-edit{background:#b71c1c;color:#fff;padding:6px 10px;border-radius:6px;border:none}
-.btn-delete{background:#d32f2f;color:#fff;padding:6px 10px;border-radius:6px;border:none}
+.btn-edit{background:#52a447;color:#fff;padding:6px 10px;border-radius:6px;border:none}
+.btn-delete{background:#8B0000;color:#fff;padding:6px 10px;border-radius:6px;border:none}
 .details-box{background:#fafafa;border:1px solid #eee;padding:12px;border-radius:6px;margin-top:8px}
 .small-input{font-size:13px;padding:6px}
 .form-text{font-size:13px;color:#666}

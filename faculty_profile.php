@@ -12,7 +12,7 @@ $faculty_email = $_SESSION['faculty_email'];
 
 // Fetch faculty data from DB
 $sql = "SELECT * FROM faculty WHERE email = ?";
-$stmt = $conn->prepare($sql);
+$stmt = $mysqli->prepare($sql); // <- $conn replaced by $mysqli
 $stmt->bind_param("s", $faculty_email);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -27,17 +27,17 @@ $faculty = $result->fetch_assoc();
 // Determine profile photo path
 $profile_photo = 'default-profile.png'; // default
 if (!empty($faculty['profile_photo'])) {
-    // Check if file exists
     if (file_exists($faculty['profile_photo'])) {
         $profile_photo = $faculty['profile_photo'];
     } else {
-        // Try adding relative path in case path stored without 'uploads/' prefix
         $possible_path = 'uploads/' . basename($faculty['profile_photo']);
         if (file_exists($possible_path)) {
             $profile_photo = $possible_path;
         }
     }
 }
+?>
+
 
 ?>
 

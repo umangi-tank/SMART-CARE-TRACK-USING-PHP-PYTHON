@@ -105,5 +105,7 @@
     <a href="admin_announcements.php"><i class="fas fa-bullhorn"></i> Announcements</a>
     <a href="admin_manage.php"><i class="fas fa-users-cog"></i> Manage</a>
     <a href="admin_timetable.php"><i class="fas fa-calendar-alt"></i> Timetable</a>
+    <a href="admin_addsubject.php"><i class="fas fa-book"></i> Add Subject</a>
+
     <a href="index.php"><i class="fas fa-sign-out-alt"></i>Logout</a>
 </div>

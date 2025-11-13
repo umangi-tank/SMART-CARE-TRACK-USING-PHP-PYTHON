@@ -18,7 +18,7 @@ if (isset($_POST['submit'])) {
     } else {
         // Check credentials in database
         $query = "SELECT * FROM faculty WHERE email = ?";
-        $stmt = $conn->prepare($query);
+        $stmt = $mysqli->prepare($query);
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();

@@ -15,7 +15,7 @@ if (isset($_POST['submit'])) {
         $login_error = "Email must be an RKU email (e.g., student@rku.ac.in).";
     } else {
         // Check in DB
-        $stmt = $conn->prepare("SELECT * FROM students WHERE email = ?");
+     $stmt = $mysqli->prepare("SELECT * FROM students WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();

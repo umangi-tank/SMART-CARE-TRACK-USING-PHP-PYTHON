@@ -45,7 +45,7 @@ if (!empty($_FILES['profile_photo']['name'])) {
     $sql = "INSERT INTO faculty (full_name, email, mobile, password, school, department, program, semester_year, division, class_counsellor, profile_photo)
             VALUES ('$full_name', '$email', '$mobile', '$password', '$school', '$department', '$program', '$semester_year', '$division', '$class_counsellor', '$profile_photo')";
 
-    if ($conn->query($sql) === TRUE) {
+    if ($mysqli->query($sql) === TRUE) {
         echo "<script>alert('Faculty Registered Successfully!');</script>";
     } else {
         echo "<script>alert('Error: " . addslashes($conn->error) . "');</script>";

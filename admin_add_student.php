@@ -75,7 +75,7 @@ if (!empty($_FILES['profile_photo']['name'])) {
     VALUES 
     ('$profile_photo', '$full_name', '$marksheet_name', '$father_name', '$mother_name', '$gender', '$dob', '$aadhar', '$blood_group', '$aadhar_name', '$email', '$mobile', '$category', '$father_mobile', '$address1', '$address2', '$city', '$state', '$country', '$pincode', '$password', '$school', '$department', '$program', '$semester', '$division', '$roll_no', '$admission_no', '$enrollment_no', '$admission_year', '$admission_type', '$internet_username', '$internet_password', '$institute_email', '$institute_password', '$apaar_id', '$anti_ragging')";
 
-    if ($conn->query($sql) === TRUE) {
+    if ($mysqli->query($sql) === TRUE) {
         echo "<script>alert('✅ Student added successfully!');</script>";
     } else {
         echo "<script>alert('❌ Error: " . addslashes($conn->error) . "');</script>";

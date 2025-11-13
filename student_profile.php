@@ -11,7 +11,7 @@ include 'db_connect.php';
 $user_email = $_SESSION['user_email'];
 
 // Fetch student details from DB
-$stmt = $conn->prepare("SELECT * FROM students WHERE email = ?");
+$stmt = $mysqli->prepare("SELECT * FROM students WHERE email = ?");
 $stmt->bind_param("s", $user_email);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -124,7 +124,7 @@ body {
             <h2>Welcome, <?php echo htmlspecialchars($student['full_name']); ?></h2>
             <p class="text-muted">Your profile details</p>
         </div>
-        <form method="post" action="logout.php">
+        <form method="post" action="index.php">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
     </div>

@@ -5,7 +5,41 @@ if (!isset($_SESSION['user_email'])) {
     exit();
 }
 
-// Sample leave types
+include 'db_connect.php'; // Include your DB connection file
+
+$user_email = $_SESSION['user_email'];
+
+// Fetch student details (name + semester/year) from DB using logged-in email
+$stmt = $mysqli->prepare("SELECT full_name, semester FROM students WHERE email = ?");
+$stmt->bind_param("s", $user_email);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+$student_name = $user ? $user['full_name'] : 'Unknown Student';
+$student_semester = $user ? $user['semester'] : 'N/A';
+
+// Handle leave form submission
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_leave'])) {
+    $leaveType = $_POST['leaveType'];
+    $fromDate = $_POST['fromDate'];
+    $toDate = $_POST['toDate'];
+    $reason = $_POST['reason'];
+
+    // Use semester/year from DB
+    $semesterYear = $student_semester;
+
+    $insert = $mysqli->prepare("INSERT INTO leave_requests (student_name, student_email, leave_type, from_date, to_date, reason, semester_year) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $insert->bind_param("sssssss", $student_name, $user_email, $leaveType, $fromDate, $toDate, $reason, $semesterYear);
+
+    if ($insert->execute()) {
+        echo "<script>alert('✅ Leave request submitted successfully!');</script>";
+    } else {
+        echo "<script>alert('❌ Error submitting request. Please try again.');</script>";
+    }
+}
+
+// Leave types
 $leaveTypes = ['Sick Leave', 'Casual Leave', 'Emergency Leave'];
 ?>
 
@@ -89,7 +123,7 @@ body {
     <!-- Header -->
     <div class="dashboard-header">
         <div>
-            <h2>Welcome, <?php echo htmlspecialchars($_SESSION['user_email']); ?></h2>
+            <h2>Welcome, <?php echo htmlspecialchars($student_name); ?></h2>
             <p class="text-muted">Submit your leave request below</p>
         </div>
         <form method="post" action="index.php">
@@ -100,7 +134,22 @@ body {
     <!-- Leave Request Form -->
     <div class="card">
         <h3>Student Leave Request Form</h3>
-        <form id="leaveForm">
+        <form method="POST" action="">
+            <div class="mb-3">
+                <label class="form-label">Name</label>
+                <input type="text" class="form-control" value="<?php echo htmlspecialchars($student_name); ?>" readonly>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" value="<?php echo htmlspecialchars($user_email); ?>" readonly>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Semester / Year</label>
+                <input type="text" class="form-control" value="<?php echo htmlspecialchars($student_semester); ?>" readonly>
+            </div>
+
             <div class="mb-3">
                 <label for="leaveType" class="form-label">Leave Type</label>
                 <select name="leaveType" id="leaveType" class="form-select" required>
@@ -127,19 +176,11 @@ body {
             </div>
 
             <div class="text-center">
-                <button type="submit" class="btn-submit">Submit Request</button>
+                <button type="submit" name="submit_leave" class="btn-submit">Submit Request</button>
             </div>
         </form>
     </div>
 </div>
-
-<script>
-document.getElementById("leaveForm").addEventListener("submit", function(e) {
-    e.preventDefault(); // prevent form submission
-    alert("✅ Leave request submitted successfully!");
-    this.reset(); // optional: form fields reset after alert
-});
-</script>
 
 </body>
 </html>
