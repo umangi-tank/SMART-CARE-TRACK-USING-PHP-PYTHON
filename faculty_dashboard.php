@@ -1,26 +1,49 @@
 <?php
 session_start();
+include 'db_connect.php'; // make sure this connects $mysqli
+
 if (!isset($_SESSION['faculty_email'])) {
     header("Location: faculty_login.php");
     exit();
 }
 
-// Sample data (replace with DB queries)
-$leaveApplications = [
-    ['id'=>1, 'student'=>'John Doe', 'type'=>'Sick Leave', 'from'=>'2025-09-01', 'to'=>'2025-09-02', 'status'=>'Approved'],
-    ['id'=>2, 'student'=>'Aditi Mehta', 'type'=>'Casual Leave', 'from'=>'2025-09-05', 'to'=>'2025-09-05', 'status'=>'Pending'],
-    ['id'=>3, 'student'=>'Ravi Patel', 'type'=>'Personal Leave', 'from'=>'2025-09-07', 'to'=>'2025-09-08', 'status'=>'Rejected']
-];
+$faculty_email = $_SESSION['faculty_email'];
 
-$receivedComplaints = [
-    ['id'=>1, 'title'=>'Classroom Projector Issue', 'date'=>'2025-09-03', 'status'=>'Resolved'],
-    ['id'=>2, 'title'=>'Lab Equipment Problem', 'date'=>'2025-09-10', 'status'=>'Pending']
-];
+// ---------------------- FETCH LEAVE REQUESTS ----------------------
+$leaveApplications = [];
+$sql_leave = "SELECT id, student_name, student_email, leave_type, from_date, to_date, status 
+              FROM leave_requests 
+              ORDER BY created_at DESC";
+$result_leave = $mysqli->query($sql_leave);
+if ($result_leave && $result_leave->num_rows > 0) {
+    while ($row = $result_leave->fetch_assoc()) {
+        $leaveApplications[] = $row;
+    }
+}
 
-$announcements = [
-    ['id'=>1, 'title'=>'Exam Timetable Released', 'date'=>'2025-09-15'],
-    ['id'=>2, 'title'=>'Holiday on 20th Sep', 'date'=>'2025-09-18']
-];
+// ---------------------- FETCH COMPLAINTS ----------------------
+$receivedComplaints = [];
+$sql_complaints = "SELECT id, student_name, student_email, complaint_type, complaint_date, status 
+                   FROM complaints 
+                   ORDER BY created_at DESC";
+$result_complaints = $mysqli->query($sql_complaints);
+if ($result_complaints && $result_complaints->num_rows > 0) {
+    while ($row = $result_complaints->fetch_assoc()) {
+        $receivedComplaints[] = $row;
+    }
+}
+
+// ---------------------- FETCH ANNOUNCEMENTS ----------------------
+$announcements = [];
+$sql_ann = "SELECT id, title, message, date 
+            FROM announcements 
+            ORDER BY created_at DESC";
+$result_ann = $mysqli->query($sql_ann);
+if ($result_ann && $result_ann->num_rows > 0) {
+    while ($row = $result_ann->fetch_assoc()) {
+        $announcements[] = $row;
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -92,6 +115,12 @@ table th, table td {vertical-align:middle;}
     color:orange;
     font-weight:bold;
 }
+.message-cell {
+    max-width:400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 </style>
 </head>
 <body>
@@ -101,15 +130,15 @@ table th, table td {vertical-align:middle;}
 <div class="content">
     <div class="dashboard-header">
         <div>
-            <h2>Welcome, <?php echo htmlspecialchars($_SESSION['faculty_email']); ?></h2>
+            <h2>Welcome, <?php echo htmlspecialchars($faculty_email); ?></h2>
             <p class="text-muted">Here’s an overview of your faculty activities</p>
         </div>
-        <form method="post" action="index.php">
+        <form method="post" action="faculty_login.php">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
     </div>
 
-    <!-- Top 3 Boxes -->
+    <!-- Top 3 Summary Boxes -->
     <div class="row g-4">
         <div class="col-md-4">
             <div class="card-box text-center">
@@ -144,7 +173,8 @@ table th, table td {vertical-align:middle;}
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>
-                            <th>Student</th>
+                            <th>Student Name</th>
+                            <th>Email</th>
                             <th>Type</th>
                             <th>From</th>
                             <th>To</th>
@@ -152,26 +182,27 @@ table th, table td {vertical-align:middle;}
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($leaveApplications as $req): ?>
-                        <tr>
-                            <td><?php echo $req['id']; ?></td>
-                            <td><?php echo $req['student']; ?></td>
-                            <td><?php echo $req['type']; ?></td>
-                            <td><?php echo $req['from']; ?></td>
-                            <td><?php echo $req['to']; ?></td>
-                            <td>
-                                <?php 
-                                    if ($req['status'] === 'Approved') {
-                                        echo "<span class='status-approved'>Approved</span>";
-                                    } elseif ($req['status'] === 'Rejected') {
-                                        echo "<span class='status-rejected'>Rejected</span>";
-                                    } else {
-                                        echo "<span class='status-pending'>Pending</span>";
-                                    }
-                                ?>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                        <?php if (count($leaveApplications) > 0): ?>
+                            <?php foreach ($leaveApplications as $req): ?>
+                                <tr>
+                                    <td><?php echo $req['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($req['student_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($req['student_email']); ?></td>
+                                    <td><?php echo htmlspecialchars($req['leave_type']); ?></td>
+                                    <td><?php echo htmlspecialchars($req['from_date']); ?></td>
+                                    <td><?php echo htmlspecialchars($req['to_date']); ?></td>
+                                    <td>
+                                        <?php 
+                                            if ($req['status'] === 'Approved') echo "<span class='status-approved'>Approved</span>";
+                                            elseif ($req['status'] === 'Rejected') echo "<span class='status-rejected'>Rejected</span>";
+                                            else echo "<span class='status-pending'>Pending</span>";
+                                        ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="7" class="text-center">No leave requests found</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -185,28 +216,65 @@ table th, table td {vertical-align:middle;}
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>
-                            <th>Title</th>
+                            <th>Student Name</th>
+                            <th>Email</th>
+                            <th>Complaint Type</th>
                             <th>Date</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($receivedComplaints as $comp): ?>
+                        <?php if (count($receivedComplaints) > 0): ?>
+                            <?php foreach ($receivedComplaints as $comp): ?>
+                                <tr>
+                                    <td><?php echo $comp['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($comp['student_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($comp['student_email']); ?></td>
+                                    <td><?php echo htmlspecialchars($comp['complaint_type']); ?></td>
+                                    <td><?php echo htmlspecialchars($comp['complaint_date']); ?></td>
+                                    <td>
+                                        <?php 
+                                            if ($comp['status'] === 'Resolved') echo "<span class='status-approved'>Resolved</span>";
+                                            elseif ($comp['status'] === 'Rejected') echo "<span class='status-rejected'>Rejected</span>";
+                                            else echo "<span class='status-pending'>Pending</span>";
+                                        ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="6" class="text-center">No complaints found</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Announcements Table -->
+        <div class="row mt-5">
+            <div class="col-md-12">
+                <h4>Announcements</h4>
+                <table class="table table-bordered table-striped">
+                    <thead class="table-dark">
                         <tr>
-                            <td><?php echo $comp['id']; ?></td>
-                            <td><?php echo $comp['title']; ?></td>
-                            <td><?php echo $comp['date']; ?></td>
-                            <td>
-                                <?php 
-                                    if ($comp['status'] === 'Resolved') {
-                                        echo "<span class='status-approved'>Resolved</span>";
-                                    } else {
-                                        echo "<span class='status-pending'>Pending</span>";
-                                    }
-                                ?>
-                            </td>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Date</th>
+                            <th>Message</th>
                         </tr>
-                        <?php endforeach; ?>
+                    </thead>
+                    <tbody>
+                        <?php if (count($announcements) > 0): ?>
+                            <?php foreach ($announcements as $a): ?>
+                                <tr>
+                                    <td><?php echo $a['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($a['title']); ?></td>
+                                    <td><?php echo htmlspecialchars($a['date']); ?></td>
+                                    <td class="message-cell"><?php echo htmlspecialchars($a['message']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="4" class="text-center">No announcements found</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>

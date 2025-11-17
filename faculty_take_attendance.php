@@ -1,97 +1,164 @@
 <?php
 session_start();
+include 'db_connect.php';
+
 if (!isset($_SESSION['faculty_email'])) {
     header("Location: faculty_login.php");
     exit();
 }
 
-include 'db_connect.php';
-
 $faculty_email = $_SESSION['faculty_email'];
 
-// Step 1: Get faculty full name
-$stmt = $mysqli->prepare("SELECT full_name FROM faculty WHERE email = ?");
+// Fetch faculty name
+$sql = "SELECT full_name FROM faculty WHERE email = ?";
+$stmt = $mysqli->prepare($sql);
 $stmt->bind_param("s", $faculty_email);
 $stmt->execute();
-$res = $stmt->get_result();
-$faculty = $res->fetch_assoc();
-$faculty_name = $faculty['full_name'] ?? '';
-$stmt->close();
+$result = $stmt->get_result();
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    $faculty_name = $row['full_name'];
+} else {
+    die("Faculty not found.");
+}
 
-// Step 2: Get timetable entries assigned to this faculty
-$q = $mysqli->prepare("SELECT semester, division, time_slot, day, subject FROM timetable WHERE faculty = ? ORDER BY FIELD(day,'Monday','Tuesday','Wednesday','Thursday','Friday'), time_slot");
-$q->bind_param("s", $faculty_name);
-$q->execute();
-$result = $q->get_result();
+// Fetch timetable for this faculty
+$sql2 = "SELECT * FROM timetable WHERE faculty = ?";
+$stmt2 = $mysqli->prepare($sql2);
+$stmt2->bind_param("s", $faculty_name);
+$stmt2->execute();
+$res = $stmt2->get_result();
 
-// Organize timetable into array for easy display
-$days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
-$slots = ['08:00-09:45','10:00-11:40','12:30-02:10','02:10-03:50','03:50-05:30'];
-$cells = [];
+$timetable = [];
+$days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+$slots = [
+    '8:05-8:55',
+    '8:55-9:45',
+    'Tea Break',
+    '10:00-10:50',
+    '10:50-11:40',
+    'Lunch Break',
+    '12:30-1:20',
+    '1:20-2:10'
+];
 
-while($row = $result->fetch_assoc()){
-    $ts = $row['time_slot'];
-    $day = $row['day'];
-    $cells[$ts][$day] = [
-        'semester' => $row['semester'],
-        'division' => $row['division'],
-        'subject' => $row['subject'],
-        'faculty' => $faculty_name
+while ($r = $res->fetch_assoc()) {
+    // ensure keys exist
+    $dayKey = $r['day'];
+    $slotKey = $r['time_slot'];
+    $timetable[$dayKey][$slotKey] = [
+        'subject' => $r['subject'],
+        'division' => $r['division']
     ];
 }
-$q->close();
 
-// Step 3: Get students list for each semester+division
-$students_by_class = [];
-$stu_res = $mysqli->query("SELECT full_name, semester, division FROM students");
-while($s = $stu_res->fetch_assoc()){
-    $key = $s['semester'].'-'.$s['division'];
-    $students_by_class[$key][] = $s['full_name'];
-}
-
-// Step 4: Handle attendance save (if DB table exists)
-if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['class_name'])){
-    $attendance_data = $_POST['attendance'] ?? [];
-    $class_name = $_POST['class_name'];
+// Handle attendance save
+if (isset($_POST['save_attendance'])) {
+    // Use posted date if provided (form includes date), otherwise today's date
     $date = $_POST['date'] ?? date('Y-m-d');
-    
-    // Loop through attendance data and save into DB
-    // Example query (table 'attendance' should exist):
-    /*
-    foreach($attendance_data as $student_name => $status){
-        $stmt = $conn->prepare("INSERT INTO attendance (student_name,class_name,date,status,faculty) VALUES (?,?,?,?,?)");
-        $stmt->bind_param("sssss",$student_name,$class_name,$date,$status,$faculty_name);
-        $stmt->execute();
-        $stmt->close();
+    $day  = $_POST['day']  ?? date('l'); // fallback to weekday name
+    $subject = $_POST['subject'] ?? '';
+    $slot = $_POST['slot'] ?? '';
+    $division = $_POST['division'] ?? '';
+    $attendance = $_POST['attendance'] ?? [];
+
+    // Prepared insert statement matching the SQL table you requested earlier
+    $insert_sql = "INSERT INTO attendance (date, day, faculty_email, class_name, student_name, roll_no, division, status)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+    $insert_stmt = $mysqli->prepare($insert_sql);
+
+    if (!$insert_stmt) {
+        die("Prepare failed: " . htmlspecialchars($mysqli->error));
     }
-    */
-    echo "<script>alert('Attendance for $class_name saved successfully'); window.location='faculty_take_attendance.php';</script>";
+
+    foreach ($attendance as $roll_no => $status) {
+        // fetch student name from students table
+        $student_name = 'Unknown';
+        $student_q = $mysqli->prepare("SELECT full_name FROM students WHERE roll_no = ?");
+        if ($student_q) {
+            $student_q->bind_param("i", $roll_no);
+            $student_q->execute();
+            $sr = $student_q->get_result()->fetch_assoc();
+            if ($sr && !empty($sr['full_name'])) {
+                $student_name = $sr['full_name'];
+            }
+            $student_q->close();
+        }
+
+        // bind and execute insert
+        $insert_stmt->bind_param(
+            "sssssiis",
+            $date,
+            $day,
+            $faculty_email,
+            $subject,       // class_name
+            $student_name,
+            $roll_no,
+            $division,
+            $status
+        );
+        $insert_stmt->execute();
+    }
+
+    $insert_stmt->close();
+
+    echo "<script>alert('Attendance saved successfully!');</script>";
 }
 
+// Student list if "Take Attendance" clicked (single page)
+$selected_day = $_POST['day'] ?? '';
+$selected_slot = $_POST['slot'] ?? '';
+$selected_subject = $_POST['subject'] ?? '';
+$selected_division = $_POST['division'] ?? '';
+$students = [];
+if (!empty($selected_division)) {
+    $stmt3 = $mysqli->prepare("SELECT roll_no, full_name FROM students WHERE division = ? ORDER BY roll_no ASC");
+    $stmt3->bind_param("s", $selected_division);
+    $stmt3->execute();
+    $students = $stmt3->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt3->close();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Faculty Timetable & Attendance</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 <style>
-body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9f9f9; margin:0; padding:0; }
-.sidebar { width:240px; position:fixed; top:0; left:0; min-height:100vh; background:#fff; border-right:1px solid #ddd; padding-top:20px; }
-.sidebar a { display:block; padding:12px 20px; color:#333; text-decoration:none; border-radius:6px; margin:5px 10px; }
-.sidebar a:hover, .sidebar a.active { background:#b71c1c; color:#fff; font-weight:bold; }
-.content { margin-left:240px; padding:20px; }
-.dashboard-header { margin-bottom:30px; display:flex; justify-content:space-between; align-items:center; }
-.logout-btn {background:#b71c1c; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;}
-.logout-btn:hover {background:#880e4f;}
-.table-bordered { border:2px solid #b71c1c; text-align:center; }
-.table-bordered th, .table-bordered td { vertical-align: middle; }
-.break-row {background:#f2f2f2; font-weight:bold;}
-.subject { font-weight: 600; }
-.teacher { font-size: 0.9em; color: #555; }
-.attendance-btn {background:#b71c1c; color:white;}
-.attendance-btn:hover {background:#880e4f;}
+body {
+    font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif;
+    background:#f9f9f9;
+}
+.content {
+    margin-left:230px;
+    padding:20px;
+}
+h2 {
+    color:#b71c1c;
+    font-weight:bold;
+}
+.table th {
+    background-color:#b71c1c;
+    color:white;
+}
+.table td {
+    vertical-align:middle;
+}
+.btn-red {
+    background-color:#b71c1c;
+    color:white;
+    border:none;
+    border-radius:4px;
+    padding:6px 12px;
+}
+.btn-red:hover { background-color:#880e4f; }
+.break-row { background:#f0f0f0; font-weight:bold; }
+.attendance-box { background:white; padding:20px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.1); margin-top:30px; }
+.logout-btn { background:#b71c1c; color:#fff; border:none; padding:6px 12px; border-radius:4px; }
+.logout-btn:hover { background:#880e4f; }
 </style>
 </head>
 <body>
@@ -99,97 +166,108 @@ body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9
 <?php include "faculty_sidebar.php"; ?>
 
 <div class="content">
-    <div class="dashboard-header">
-        <h2>Weekly Timetable & Attendance</h2>
-        <form method="post">
-            <input type="date" name="date" value="<?php echo date('Y-m-d'); ?>" class="form-control d-inline-block w-auto me-2">
-            <button type="submit" class="logout-btn">Save Attendance</button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Weekly Timetable & Attendance</h2>
+            <p class="text-muted mb-0">Faculty: <strong><?php echo htmlspecialchars(strtoupper($faculty_name)); ?></strong></p>
+        </div>
+        <form method="post" action="index.php">
+           
         </form>
     </div>
 
-    <table class="table table-bordered">
-        <thead class="table-light">
-            <tr>
-                <th>Time Slot</th>
-                <?php foreach($days as $d) echo "<th>$d</th>"; ?>
-            </tr>
-        </thead>
-        <tbody>
-        <?php foreach($slots as $slot): ?>
-            <tr>
-                <td><strong><?php echo $slot; ?></strong></td>
-                <?php foreach($days as $day): 
-                    if(isset($cells[$slot][$day])):
-                        $c = $cells[$slot][$day];
-                        $class_key = $c['semester'].'-'.$c['division'];
-                        $students = $students_by_class[$class_key] ?? [];
-                        ?>
-                        <td>
-                            <b><?php echo $c['semester'].'-'.$c['division']; ?></b><br>
-                            <?php echo $c['subject']; ?><br>
-                            <small><?php echo $c['faculty']; ?></small><br>
-                            <?php if(!empty($students)): ?>
-                            <button type="button" class="btn btn-sm btn-outline-primary mt-1" 
-                                data-bs-toggle="modal" data-bs-target="#attendanceModal" 
-                                data-class="<?php echo $class_key; ?>" 
-                                data-students='<?php echo htmlspecialchars(json_encode($students), ENT_QUOTES); ?>'>
-                                Take Attendance
-                            </button>
-                            <?php endif; ?>
-                        </td>
+    <!-- Timetable -->
+    <div class="card p-3 shadow-sm">
+        <table class="table table-bordered text-center align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Time Slot</th>
+                    <?php foreach ($days as $day): ?>
+                        <th><?php echo htmlspecialchars($day); ?></th>
+                    <?php endforeach; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($slots as $slot): ?>
+                    <?php if (stripos($slot, 'break') !== false): ?>
+                        <tr class="break-row">
+                            <td colspan="<?php echo count($days) + 1; ?>"><?php echo htmlspecialchars($slot); ?></td>
+                        </tr>
                     <?php else: ?>
-                        <td>-</td>
+                        <tr>
+                            <td><strong><?php echo htmlspecialchars($slot); ?></strong></td>
+                            <?php foreach ($days as $day): ?>
+                                <td>
+                                    <?php
+                                    if (isset($timetable[$day][$slot])) {
+                                        $subject = $timetable[$day][$slot]['subject'];
+                                        $division = $timetable[$day][$slot]['division'];
+                                        echo '<b>' . htmlspecialchars(strtoupper($subject)) . '</b><br>';
+                                        echo '<small>Div: ' . htmlspecialchars($division) . '</small><br>';
+                                        // form posts back to same page and loads student list
+                                        echo "<form method='POST' class='mt-2'>";
+                                        echo "<input type='hidden' name='day' value=\"" . htmlspecialchars($day) . "\">";
+                                        echo "<input type='hidden' name='slot' value=\"" . htmlspecialchars($slot) . "\">";
+                                        echo "<input type='hidden' name='subject' value=\"" . htmlspecialchars($subject) . "\">";
+                                        echo "<input type='hidden' name='division' value=\"" . htmlspecialchars($division) . "\">";
+                                        echo "<button type='submit' class='btn btn-red btn-sm'>Take Attendance</button>";
+                                        echo "</form>";
+                                    } else {
+                                        echo "—";
+                                    }
+                                    ?>
+                                </td>
+                            <?php endforeach; ?>
+                        </tr>
                     <?php endif; ?>
                 <?php endforeach; ?>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-
-<!-- Attendance Modal -->
-<div class="modal fade" id="attendanceModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST">
-        <div class="modal-header bg-danger text-white">
-          <h5 class="modal-title">Take Attendance</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-        </div>
-        <div class="modal-body">
-            <input type="hidden" name="date" value="<?php echo date('Y-m-d'); ?>">
-            <input type="hidden" name="class_name" id="class_name">
-            <div id="student_list"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn attendance-btn">Save Attendance</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        </div>
-      </form>
+            </tbody>
+        </table>
     </div>
-  </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-const attendanceModal = document.getElementById('attendanceModal');
-attendanceModal.addEventListener('show.bs.modal', event=>{
-    const button = event.relatedTarget;
-    const className = button.getAttribute('data-class');
-    const students = JSON.parse(button.getAttribute('data-students'));
-    document.getElementById('class_name').value = className;
-    const studentListDiv = document.getElementById('student_list');
-    studentListDiv.innerHTML = '';
-    students.forEach((s,i)=>{
-        studentListDiv.innerHTML += `<div class="form-check">
-            <input class="form-check-input" type="radio" name="attendance[${s}]" id="present_${i}" value="Present" checked>
-            <label class="form-check-label" for="present_${i}">${s} - Present</label>
-            <input class="form-check-input ms-3" type="radio" name="attendance[${s}]" id="absent_${i}" value="Absent">
-            <label class="form-check-label" for="absent_${i}">Absent</label>
-        </div>`;
-    });
-});
-</script>
+    <!-- Attendance Box -->
+    <?php if (!empty($students)): ?>
+        <div class="attendance-box mt-4">
+            <h4 class="mb-3 text-danger">
+                Attendance for <?php echo htmlspecialchars("$selected_subject ($selected_division) - $selected_day [$selected_slot]"); ?>
+            </h4>
+
+            <p><strong>Date:</strong> <?php echo date('d M Y'); ?></p>
+
+            <form method="POST">
+                <input type="hidden" name="subject" value="<?php echo htmlspecialchars($selected_subject); ?>">
+                <input type="hidden" name="day" value="<?php echo htmlspecialchars($selected_day); ?>">
+                <input type="hidden" name="slot" value="<?php echo htmlspecialchars($selected_slot); ?>">
+                <input type="hidden" name="division" value="<?php echo htmlspecialchars($selected_division); ?>">
+                <input type="hidden" name="date" value="<?php echo date('Y-m-d'); ?>">
+
+                <table class="table table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Roll No</th>
+                            <th>Student Name</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($students as $s): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($s['roll_no']); ?></td>
+                                <td><?php echo htmlspecialchars($s['full_name']); ?></td>
+                                <td>
+                                    <input type="radio" name="attendance[<?php echo htmlspecialchars($s['roll_no']); ?>]" value="Present" required> Present
+                                    <input type="radio" name="attendance[<?php echo htmlspecialchars($s['roll_no']); ?>]" value="Absent"> Absent
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <button type="submit" name="save_attendance" class="btn-red mt-2">Save Attendance</button>
+            </form>
+        </div>
+    <?php endif; ?>
+</div>
 
 </body>
 </html>

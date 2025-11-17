@@ -4,6 +4,26 @@ if(!isset($_SESSION['admin_name'])) {
     header("Location: admin_login.php");
     exit();
 }
+
+include 'db_connect.php'; // make sure $mysqli connection is here
+
+// ---------------------- FETCH COUNTS FROM DATABASE ----------------------
+
+// Count of all students
+$result_students = $mysqli->query("SELECT COUNT(*) as total_students FROM students");
+$students_count = $result_students->fetch_assoc()['total_students'] ?? 0;
+
+// Count of all complaints
+$result_complaints = $mysqli->query("SELECT COUNT(*) as total_complaints FROM complaints");
+$complaints_count = $result_complaints->fetch_assoc()['total_complaints'] ?? 0;
+
+// Count of all teachers
+$result_teachers = $mysqli->query("SELECT COUNT(*) as total_teachers FROM faculty");
+$teachers_count = $result_teachers->fetch_assoc()['total_teachers'] ?? 0;
+
+// Count of pending requests (example: leave requests pending approval)
+$result_pending = $mysqli->query("SELECT COUNT(*) as total_pending FROM leave_requests WHERE status='Pending'");
+$pending_count = $result_pending->fetch_assoc()['total_pending'] ?? 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -19,10 +39,8 @@ body {
     margin:0;
     display:flex;
 }
-
-/* Sidebar layout fix */
 .content {
-    margin-left:220px; /* adjust based on sidebar width */
+    margin-left:220px;
     padding:30px;
     flex:1;
 }
@@ -35,7 +53,6 @@ body {
 .dashboard-header h2 { color:#b71c1c; }
 .dashboard-header .welcome { color:#444; font-weight:bold; }
 
-/* Status summary boxes */
 .status-boxes {
     display:flex;
     flex-wrap:wrap;
@@ -75,7 +92,6 @@ body {
     color:#b71c1c;
 }
 
-/* Mission & Vision Section */
 .mission-vision {
     background:#fff;
     border-radius:10px;
@@ -92,52 +108,12 @@ body {
     line-height:1.6;
 }
 
-/* Dashboard cards layout */
-.dashboard-cards {
-    display:flex;
-    flex-wrap:wrap;
-    gap:25px;
-    justify-content:flex-start;
-}
-.dashboard-cards .card {
-    flex: 1 1 220px;
-    max-width: 250px;
-    min-height: 150px;
-    background: #fff;
-    border-radius: 10px;
-    padding: 25px;
-    border-top: 5px solid #b71c1c;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    transition: 0.3s;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-}
-.dashboard-cards .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-}
-.dashboard-cards .card h3 {
-    font-size: 18px;
-    color: #b71c1c;
-    margin-bottom: 10px;
-}
-.dashboard-cards .card p {
-    font-size: 14px;
-    color: #555;
-}
 @media (max-width: 900px) {
-    .dashboard-cards { justify-content: center; }
-    .dashboard-cards .card { max-width: 45%; }
-}
-@media (max-width: 600px) {
-    .dashboard-cards .card { max-width: 90%; }
+    .status-boxes { justify-content: center; }
 }
 </style>
 </head>
 <body>
-
 
 <?php include 'admin_sidebar.php'; ?>
 
@@ -152,28 +128,28 @@ body {
         <div class="status-box">
             <div class="info">
                 <h4>All Students</h4>
-                <p>1250</p>
+                <p><?php echo $students_count; ?></p>
             </div>
             <i class="fas fa-user-graduate"></i>
         </div>
         <div class="status-box">
             <div class="info">
                 <h4>All Complaints</h4>
-                <p>20</p>
+                <p><?php echo $complaints_count; ?></p>
             </div>
             <i class="fas fa-building"></i>
         </div>
         <div class="status-box">
             <div class="info">
                 <h4>All Teachers</h4>
-                <p>85</p>
+                <p><?php echo $teachers_count; ?></p>
             </div>
             <i class="fas fa-chalkboard-teacher"></i>
         </div>
         <div class="status-box">
             <div class="info">
                 <h4>Pending Requests</h4>
-                <p>5</p>
+                <p><?php echo $pending_count; ?></p>
             </div>
             <i class="fas fa-envelope-open-text"></i>
         </div>
@@ -189,6 +165,5 @@ body {
     </div>
 
 </div>
-
 </body>
 </html>

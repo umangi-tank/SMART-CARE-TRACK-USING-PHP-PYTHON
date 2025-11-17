@@ -5,23 +5,50 @@ if (!isset($_SESSION['user_email'])) {
     exit();
 }
 
-// Sample data arrays (replace with DB queries)
-$leaveRequests = [
-    ['id'=>1,'type'=>'Sick Leave','from'=>'2025-09-01','to'=>'2025-09-02','status'=>'Approved'],
-    ['id'=>2,'type'=>'Casual Leave','from'=>'2025-09-05','to'=>'2025-09-05','status'=>'Pending']
-];
-$complaints = [
-    ['id'=>1,'title'=>'Hostel Issue','date'=>'2025-09-03','status'=>'Resolved'],
-    ['id'=>2,'title'=>'Library Complaint','date'=>'2025-09-10','status'=>'Pending']
-];
-// Attendance percentages
-$attendance = [
-    'average'=>88,
-    'last_month'=>90,
-    'current_month'=>92
-];
-?>
+include 'db_connect.php'; // MySQLi connection
+$student_email = $_SESSION['user_email'];
 
+// ---------------------- Fetch Leave Requests ----------------------
+$leaveRequests = [];
+$stmt = $mysqli->prepare("SELECT id, leave_type, from_date, to_date, status 
+                          FROM leave_requests 
+                          WHERE student_email = ? 
+                          ORDER BY from_date DESC");
+$stmt->bind_param("s", $student_email);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $leaveRequests[] = $row;
+}
+$stmt->close();
+
+// ---------------------- Fetch Complaints ----------------------
+$complaints = [];
+$stmt = $mysqli->prepare("SELECT id, complaint_type, complaint_date, status 
+                          FROM complaints 
+                          WHERE student_email = ? 
+                          ORDER BY complaint_date DESC");
+$stmt->bind_param("s", $student_email);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $complaints[] = $row;
+}
+$stmt->close();
+
+// ---------------------- Fetch Announcements ----------------------
+$announcements = [];
+$stmt = $mysqli->prepare("SELECT id, title, message, date 
+                          FROM announcements 
+                          ORDER BY created_at DESC 
+                          LIMIT 5");
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $announcements[] = $row;
+}
+$stmt->close();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,7 +73,7 @@ body {
     align-items:center;
 }
 
-/* Top 4 boxes */
+/* Top Boxes */
 .card-box {
     border:1px solid #b71c1c; 
     border-radius:8px; 
@@ -70,18 +97,6 @@ body {
 .card-box p {
     font-size:14px; 
     margin:0;
-}
-
-/* Attendance sub-boxes below tables */
-.attendance-sub {
-    border:1px solid #b71c1c; 
-    border-radius:6px; 
-    padding:15px; 
-    margin:5px; 
-    text-align:center; 
-    background:#fff;
-    width:30%; 
-    display:inline-block;
 }
 
 .table-section {margin-top:40px;}
@@ -112,34 +127,27 @@ table th, table td {vertical-align:middle;}
         </form>
     </div>
 
-    <!-- Top 4 Boxes -->
+    <!-- Top Boxes -->
     <div class="row g-4">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card-box text-center">
                 <i class="bi bi-calendar-check"></i>
                 <h4><?php echo count($leaveRequests); ?></h4>
                 <p>Total Leave Requests</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card-box text-center">
                 <i class="bi bi-exclamation-circle"></i>
                 <h4><?php echo count($complaints); ?></h4>
                 <p>Total Complaints</p>
             </div>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="card-box text-center">
                 <i class="bi bi-speaker"></i>
-                <h4>2</h4>
+                <h4><?php echo count($announcements); ?></h4>
                 <p>New Announcements</p>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card-box text-center">
-                <i class="bi bi-check2-circle"></i>
-                <h4><?php echo $attendance['current_month']; ?>%</h4>
-                <p>Current Month Attendance</p>
             </div>
         </div>
     </div>
@@ -161,15 +169,19 @@ table th, table td {vertical-align:middle;}
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($leaveRequests as $leave): ?>
-                        <tr>
-                            <td><?php echo $leave['id']; ?></td>
-                            <td><?php echo $leave['type']; ?></td>
-                            <td><?php echo $leave['from']; ?></td>
-                            <td><?php echo $leave['to']; ?></td>
-                            <td><?php echo $leave['status']; ?></td>
-                        </tr>
-                        <?php endforeach; ?>
+                        <?php if(count($leaveRequests) > 0): ?>
+                            <?php foreach($leaveRequests as $leave): ?>
+                                <tr>
+                                    <td><?php echo $leave['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($leave['leave_type']); ?></td>
+                                    <td><?php echo $leave['from_date']; ?></td>
+                                    <td><?php echo $leave['to_date']; ?></td>
+                                    <td><?php echo $leave['status']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="5" class="text-center">No leave requests found</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -181,42 +193,61 @@ table th, table td {vertical-align:middle;}
                     <thead class="table-dark">
                         <tr>
                             <th>Id</th>
-                            <th>Title</th>
+                            <th>Type</th>
                             <th>Date</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach($complaints as $comp): ?>
-                        <tr>
-                            <td><?php echo $comp['id']; ?></td>
-                            <td><?php echo $comp['title']; ?></td>
-                            <td><?php echo $comp['date']; ?></td>
-                            <td><?php echo $comp['status']; ?></td>
-                        </tr>
-                        <?php endforeach; ?>
+                        <?php if(count($complaints) > 0): ?>
+                            <?php foreach($complaints as $comp): ?>
+                                <tr>
+                                    <td><?php echo $comp['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($comp['complaint_type']); ?></td>
+                                    <td><?php echo $comp['complaint_date']; ?></td>
+                                    <td><?php echo $comp['status']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="4" class="text-center">No complaints found</td></tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
 
-    <!-- Attendance Sub-Boxes Below Tables -->
-    <div class="text-center mt-4">
-        <div class="attendance-sub">
-            <strong>Average Attendance</strong>
-            <p><?php echo $attendance['average']; ?>%</p>
+        <!-- Announcements Table -->
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h4>Announcements</h4>
+                <table class="table table-bordered table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Id</th>
+                            <th>Title</th>
+                            <th>Message</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if(count($announcements) > 0): ?>
+                            <?php foreach($announcements as $ann): ?>
+                                <tr>
+                                    <td><?php echo $ann['id']; ?></td>
+                                    <td><?php echo htmlspecialchars($ann['title']); ?></td>
+                                    <td><?php echo htmlspecialchars($ann['message']); ?></td>
+                                    <td><?php echo $ann['date']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="4" class="text-center">No announcements found</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
-        <div class="attendance-sub">
-            <strong>Last Month</strong>
-            <p><?php echo $attendance['last_month']; ?>%</p>
-        </div>
-        <div class="attendance-sub">
-            <strong>Current Month</strong>
-            <p><?php echo $attendance['current_month']; ?>%</p>
-        </div>
-    </div>
 
+    </div>
 </div>
 </body>
 </html>

@@ -34,11 +34,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complaint_id'])) {
     $status = $_POST['status'];
     $reply = $_POST['reply'];
 
-    $update = $mysqli->prepare("UPDATE complaints SET status = ?, description = CONCAT(description, '\n\n--- Faculty Reply: ', ?) WHERE id = ?");
+    $update = $mysqli->prepare("
+        UPDATE complaints 
+        SET status = ?, 
+            description = CONCAT(description, '\n\n--- Faculty Reply: ', ?) 
+        WHERE id = ?
+    ");
     $update->bind_param("ssi", $status, $reply, $complaintId);
     $update->execute();
 
-    echo "<script>alert('Reply sent successfully); window.location='faculty_manage_complaints.php';</script>";
+    // ✅ Fixed Alert Script
+    echo "<script>alert('Reply sent successfully'); window.location='faculty_manage_complaints.php';</script>";
     exit();
 }
 ?>
@@ -101,9 +107,12 @@ body { background-color: #f9f9f9; font-family: "Gill Sans","Gill Sans MT",Calibr
                         <td style="text-align:left;"><?= nl2br(htmlspecialchars($comp['description'])); ?></td>
                         <td>
                             <?php
-                                $status = $comp['status'] ?? 'Rejected'; // default to Rejected
-                                if ($status === 'Resolved') echo "<span class='status-resolved'>Resolved</span>";
-                                else echo "<span class='status-pending'>Rejected</span>";
+                                $status = $comp['status'] ?? 'Rejected';
+                                if ($status === 'Resolved') {
+                                    echo "<span class='status-resolved'>Resolved</span>";
+                                } else {
+                                    echo "<span class='status-pending'>Rejected</span>";
+                                }
                             ?>
                         </td>
                         <td>

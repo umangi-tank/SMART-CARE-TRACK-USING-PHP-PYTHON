@@ -5,38 +5,41 @@ if (!isset($_SESSION['user_email'])) {
     exit();
 }
 
-// Sample student data
-$student = [
-    'name' => 'TANK UMANGI ASHOKBHAI',
-    'enroll' => '23SOECE13023',
-    'college' => 'SOE',
-    'department' => 'Computer Engineering',
-    'course' => 'UCE',
-    'semester' => 'Sem-VII',
-    'division' => 'A',
-    'batch' => '7CEA',
-    'student_mobile' => '9173914174',
-    'father_mobile' => '7623045838',
-    'term_start' => '24/06/2025',
-    'term_end' => '14/11/2025'
-];
+include 'db_connect.php'; // make sure this connects $mysqli
 
-// Sample month-wise attendance data
-$attendance = [
-    ['month'=>'June - 2025','total_lectures'=>2,'absent'=>2,'present'=>0,'percentage'=>0.00],
-    ['month'=>'July - 2025','total_lectures'=>44,'absent'=>29,'present'=>15,'percentage'=>34.09],
-    ['month'=>'August - 2025','total_lectures'=>35,'absent'=>29,'present'=>6,'percentage'=>17.14],
-    ['month'=>'September - 2025','total_lectures'=>30,'absent'=>12,'present'=>18,'percentage'=>60.00],
-    ['month'=>'October - 2025','total_lectures'=>20,'absent'=>5,'present'=>15,'percentage'=>75.00]
-];
+$student_email = $_SESSION['user_email'];
+
+// ---------------------- FETCH STUDENT INFO ----------------------
+$stmt = $mysqli->prepare("SELECT full_name, enrollment_no, school, department, program, semester, division, admission_year, mobile, father_mobile,  roll_no 
+                          FROM students 
+                          WHERE email = ?");
+$stmt->bind_param("s", $student_email);
+$stmt->execute();
+$result = $stmt->get_result();
+$student = $result->fetch_assoc();
+$stmt->close();
+
+
+// ---------------------- FETCH ATTENDANCE FOR THIS STUDENT ----------------------
+$attendance = [];
+$stmt_att = $mysqli->prepare("SELECT date, day, faculty_email, class_name, student_name, roll_no, division, status 
+                              FROM attendance 
+                              WHERE roll_no = ? 
+                              ORDER BY date ASC");
+$stmt_att->bind_param("s", $student['roll_no']);
+$stmt_att->execute();
+$result_att = $stmt_att->get_result();
+while ($row = $result_att->fetch_assoc()) {
+    $attendance[] = $row;
+}
+$stmt_att->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Month-wise Attendance</title>
+<title>Student Attendance</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
 body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9f9f9; margin:0; padding:0; }
@@ -48,6 +51,7 @@ body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9
 .logout-btn {background:#b71c1c; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;}
 .logout-btn:hover {background:#880e4f;}
 .table th, .table td { vertical-align: middle; }
+.card { background:#fff; border-radius:10px; padding:20px; box-shadow:0 4px 10px rgba(0,0,0,0.1); margin-bottom:20px;}
 </style>
 </head>
 <body>
@@ -58,7 +62,7 @@ body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9
     <div class="dashboard-header">
         <div>
             <h2>Welcome, <?php echo htmlspecialchars($_SESSION['user_email']); ?></h2>
-            <p class="text-muted">Month-wise Average Attendance List</p>
+            <p class="text-muted">Your Attendance Records</p>
         </div>
         <form method="post" action="index.php">
             <button type="submit" class="logout-btn">Logout</button>
@@ -66,60 +70,60 @@ body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9
     </div>
 
     <!-- Student Info -->
-    <div class="card mb-4 p-3">
+    <div class="card">
         <div class="row">
             <div class="col-md-6">
-                <p><strong>Name:</strong> <?php echo $student['name']; ?></p>
-                <p><strong>College:</strong> <?php echo $student['college']; ?></p>
-                <p><strong>Course:</strong> <?php echo $student['course']; ?></p>
-                <p><strong>Division:</strong> <?php echo $student['division']; ?></p>
-                <p><strong>Student Mobile No:</strong> <?php echo $student['student_mobile']; ?></p>
-                <p><strong>Term Date:</strong> <?php echo $student['term_start'] . ' - ' . $student['term_end']; ?></p>
+                <p><strong>Name:</strong> <?php echo htmlspecialchars($student['full_name']); ?></p>
+                <p><strong>College:</strong> <?php echo htmlspecialchars($student['school']); ?></p>
+                <p><strong>Course:</strong> <?php echo htmlspecialchars($student['program']); ?></p>
+                <p><strong>Division:</strong> <?php echo htmlspecialchars($student['division']); ?></p>
+                <p><strong>Student Mobile No:</strong> <?php echo htmlspecialchars($student['mobile']); ?></p>
             </div>
             <div class="col-md-6">
-                <p><strong>Enrollment No:</strong> <?php echo $student['enroll']; ?></p>
-                <p><strong>Department:</strong> <?php echo $student['department']; ?></p>
-                <p><strong>Semester:</strong> <?php echo $student['semester']; ?></p>
-                <p><strong>Batch:</strong> <?php echo $student['batch']; ?></p>
-                <p><strong>Father Mobile No:</strong> <?php echo $student['father_mobile']; ?></p>
+                <p><strong>Enrollment No:</strong> <?php echo htmlspecialchars($student['enrollment_no']); ?></p>
+                <p><strong>Department:</strong> <?php echo htmlspecialchars($student['department']); ?></p>
+                <p><strong>Semester:</strong> <?php echo htmlspecialchars($student['semester']); ?></p>
+                <p><strong>Batch:</strong> <?php echo htmlspecialchars($student['admission_year']); ?></p>
+                <p><strong>Father Mobile No:</strong> <?php echo htmlspecialchars($student['father_mobile']); ?></p>
+                <p><strong>Roll No:</strong> <?php echo htmlspecialchars($student['roll_no']); ?></p>
             </div>
-        </div>
-
-        <!-- Month Selection -->
-        <div class="mt-3">
-            <label for="monthSelect"><strong>Month:</strong></label>
-            <select id="monthSelect" class="form-select" style="width:200px;">
-                <?php foreach($attendance as $att): ?>
-                    <option value="<?php echo $att['month']; ?>"><?php echo $att['month']; ?></option>
-                <?php endforeach; ?>
-            </select>
         </div>
     </div>
 
     <!-- Attendance Table -->
-    <div class="card p-3">
+    <div class="card">
         <table class="table table-bordered table-striped">
             <thead class="table-dark">
                 <tr>
                     <th>Sr. No.</th>
-                    <th>Month</th>
-                    <th>Total Lecture</th>
-                    <th>Absent Lecture</th>
-                    <th>Present Lecture</th>
-                    <th>Attendance %</th>
+                    <th>Updated From</th>
+                    <th>Day</th>
+                    <th>Faculty</th>
+                    <th>Class</th>
+                    <th>Student Name</th>
+                    <th>Roll No</th>
+                    <th>Division</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach($attendance as $index => $att): ?>
-                    <tr>
-                        <td><?php echo $index+1; ?></td>
-                        <td><?php echo $att['month']; ?></td>
-                        <td><?php echo $att['total_lectures']; ?></td>
-                        <td><?php echo $att['absent']; ?></td>
-                        <td><?php echo $att['present']; ?></td>
-                        <td><?php echo $att['percentage']; ?>%</td>
-                    </tr>
-                <?php endforeach; ?>
+                <?php if(count($attendance) > 0): ?>
+                    <?php foreach($attendance as $index => $att): ?>
+                        <tr>
+                            <td><?php echo $index + 1; ?></td>
+                            <td><?php echo htmlspecialchars($att['date']); ?></td>
+                            <td><?php echo htmlspecialchars($att['day']); ?></td>
+                            <td><?php echo htmlspecialchars($att['faculty_email']); ?></td>
+                            <td><?php echo htmlspecialchars($att['class_name']); ?></td>
+                            <td><?php echo htmlspecialchars($att['student_name']); ?></td>
+                            <td><?php echo htmlspecialchars($att['roll_no']); ?></td>
+                            <td><?php echo htmlspecialchars($att['division']); ?></td>
+                            <td><?php echo htmlspecialchars($att['status']); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr><td colspan="9" class="text-center">No attendance records found</td></tr>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>

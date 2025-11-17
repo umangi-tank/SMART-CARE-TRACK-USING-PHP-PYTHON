@@ -137,7 +137,7 @@ body { font-family:"Gill Sans","Gill Sans MT",Calibri,sans-serif; background:#f9
                 Division: <strong><?php echo htmlspecialchars($division); ?></strong>
             </p>
         </div>
-        <form method="post" action="logout.php">
+        <form method="post" action="index.php">
             <button type="submit" class="logout-btn">Logout</button>
         </form>
     </div>
